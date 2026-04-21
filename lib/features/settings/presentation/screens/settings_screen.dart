@@ -12,6 +12,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/network/dio_client.dart'; // ✅ ADD
 import '../../../protocols/data/protocol_repository.dart';
 import '../../../protocols/presentation/providers/protocol_provider.dart';
+import 'change_password_screen.dart';
 
 final organizationProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {

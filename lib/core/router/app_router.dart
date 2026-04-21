@@ -23,6 +23,7 @@ import '../../features/ai_chat/presentation/screens/chat_screen.dart';
 import '../constants/theme_constants.dart';
 import 'route_names.dart';
 import '../../features/auth/presentation/screens/select_organization_page.dart';
+import '../../features/settings/presentation/screens/change_password_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -99,6 +100,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: RoutePaths.deviceDetail, name: RouteNames.deviceDetail, builder: (c, s) => DeviceDetailScreen(deviceId: s.pathParameters['id']!)),
       GoRoute(path: RoutePaths.sessionDetail, name: RouteNames.sessionDetail, builder: (c, s) => SessionDetailScreen(sessionId: s.pathParameters['id']!)),
       GoRoute(path: RoutePaths.profileEdit, name: RouteNames.profileEdit, builder: (c, s) => const ProfileEditScreen()),
+      GoRoute(path: RoutePaths.changePassword,builder: (context, state) => const ChangePasswordScreen()),
       GoRoute(path: RoutePaths.changePassword, name: RouteNames.changePassword, builder: (c, s) => const ChangePasswordScreen()),
       GoRoute(path: RoutePaths.subscription, name: RouteNames.subscription, builder: (c, s) => const SubscriptionScreen()),
       GoRoute(path: RoutePaths.presets, name: RouteNames.presets, builder: (c, s) => const PresetManagementScreen()),

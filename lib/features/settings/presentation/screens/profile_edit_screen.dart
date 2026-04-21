@@ -60,16 +60,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     loadProfile();
   }
 
-  // void loadProfile() async {
-  //   final user = await ref.read(authRemoteSourceProvider).getProfile();
-
-  //   nameController.text = user.name ?? '';
-  //   emailController.text = user.email ?? '';
-  //   phoneController.text = user.phone ?? '';
-  //   countryController.text = user.country ?? '';
-  //   stateController.text = user.state ?? '';
-  //   dobController.text = user.dob ?? '';
-  // }
   void loadProfile() async {
   final user = await ref.read(authRemoteSourceProvider).getProfile();
 
@@ -82,7 +72,112 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   stateController.text = user.state ?? '';
   dobController.text = user.dob ?? '';
 }
+//  update profile psw
+void _showChangePasswordDialog(BuildContext context) {
+  final currentController = TextEditingController();
+  final newController = TextEditingController();
+  final confirmController = TextEditingController();
 
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Change Password",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+
+              TextField(
+                controller: currentController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  hintText: "Enter your current password",
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: newController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  hintText: "Enter your new password",
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              TextField(
+                controller: confirmController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  hintText: "Confirm your new password",
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Cancel"),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (newController.text != confirmController.text) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Passwords do not match"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        try {
+                          await ref
+                              .read(authRemoteSourceProvider)
+                              .changePassword(
+                                oldPassword: currentController.text,
+                                newPassword: newController.text,
+                              );
+
+                          Navigator.pop(context);
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Password changed successfully"),
+                            ),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Error: $e")),
+                          );
+                        }
+                      },
+                      child: const Text("Change Password"),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,46 +256,30 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
             const SizedBox(height: 24),
             // psw 
-            const Text('Password'),
-    TextFormField(
-      controller: passwordController,
-      obscureText: true,
-    ),
+    //         const Text('Password'),
+    // TextFormField(
+    //   controller: passwordController,
+    //   obscureText: true,
+    // ),
+    const Text(
+  'Password',
+  style: TextStyle(color: Colors.white),
+),
+
+const SizedBox(height: 8),
+
+ElevatedButton(
+  onPressed: () {
+    _showChangePasswordDialog(context);
+  },
+  child: const Text("CHANGE PASSWORD"),
+),
 
     const SizedBox(height: 24),
             // ✅ SAVE BUTTON
             SizedBox(
               height: 48,
               child: ElevatedButton(
-// onPressed: () async {
-//   try {
-//     final parts = nameController.text.trim().split(' ');
-
-//     final firstName = parts.isNotEmpty ? parts[0] : '';
-//     final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
-
-//     final response = await ref.read(authRemoteSourceProvider).updateProfile({
-//       'firstName': firstName,
-//       'lastName': lastName,
-//       'email': emailController.text,
-//       'phone': phoneController.text,
-//       'country': countryController.text,
-//       'state': stateController.text,
-//       'dob': dobController.text,
-//     });
-
-//     print(response); // 🔥 DEBUG
-
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       const SnackBar(content: Text('Profile Updated')),
-//     );
-//   } catch (e) {
-//     print(e); // 🔥 IMPORTANT
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       SnackBar(content: Text('Error: $e')),
-//     );
-//   }
-// },
 onPressed: () async {
   try {
     final parts = nameController.text.trim().split(' ');
