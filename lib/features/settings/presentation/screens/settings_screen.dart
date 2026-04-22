@@ -32,7 +32,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: ThemeConstants.background,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         slivers: [
           // Gradient header with profile
           SliverToBoxAdapter(
@@ -252,6 +252,7 @@ class SettingsScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 20),
                 // Logout
                 AnimatedEntrance(
                     index: 6,

@@ -4,11 +4,11 @@ class ApiEndpoints {
 //   Auth
 static const String profileMe = "/profile/me";
 static const String changePassword = "/profile/me/password";
-static const String forgotPassword = "/api/v1/profile/me/forget-password";
+static const String forgotPassword = "/profile/me/forget-password";
 
 // /changed
+// static const String login = '/auth/login';
 static const String login = '/auth/login';
-//static const String login = '/api/v1/auth/login';
   // Base URLs
   static const String djangoBaseUrl = 'http://54.241.236.53:8080/api/v1';
   static const String nodeBaseUrl = 'http://3.111.197.247:5000/hydrawav/v1/';
@@ -68,6 +68,11 @@ static const String baseUrl = "http://54.241.236.53:8080";
 
   // MQTT
   static const String mqttPublish = '/mqtt/publish';
+
+  /// Node Nest: `GET /hydrawav/v1/sessions/active/:organizationId`
+  /// Returns active sessions with per-device `moon` / `sun` pad strings.
+  static String sessionsActive(String organizationId) =>
+      'sessions/active/$organizationId';
 
   // AI (Next.js routes - uses Django base URL with different path)
   static const String aiAnalyze = '/api/analyze';
