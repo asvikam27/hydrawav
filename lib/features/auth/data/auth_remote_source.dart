@@ -125,24 +125,28 @@ Future<List<Map<String, dynamic>>> getOrganizations() async {
   return List<Map<String, dynamic>>.from(response.data);
 }
 
-  Future<void> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  }) async {
+  Future<void> changePassword(Map<String, dynamic> data) async {
     try {
       await _dio.put(
         ApiEndpoints.changePassword,
-        data: {
-          'oldPassword': oldPassword,
-          'newPassword': newPassword,
-        },
+        data:data,
       );
-    } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['message'] ?? 'Failed to change password',
-        statusCode: e.response?.statusCode,
-      );
-    }
+    }  on DioException catch (e) {
+  print("ERROR DATA: ${e.response?.data}");
+
+  String message = 'Failed to change password';
+
+  if (e.response?.data is Map<String, dynamic>) {
+    message = e.response?.data['message'] ?? message;
+  } else if (e.response?.data is String) {
+    message = e.response?.data;
+  }
+
+  throw ServerException(
+    message,
+    statusCode: e.response?.statusCode,
+  );
+}
   }
 
 Future<void> forgotPassword(String userId) async {

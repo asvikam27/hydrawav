@@ -146,12 +146,15 @@ void _showChangePasswordDialog(BuildContext context) {
                         }
 
                         try {
+
+                        final data = {
+  "currentPassword": currentController.text,
+  "newPassword": newController.text,
+  "confirmPassword": confirmController.text
+};
                           await ref
                               .read(authRemoteSourceProvider)
-                              .changePassword(
-                                oldPassword: currentController.text,
-                                newPassword: newController.text,
-                              );
+                              .changePassword(data);
 
                           Navigator.pop(context);
 
@@ -303,7 +306,7 @@ ElevatedButton(
     _showChangePasswordDialog(context);
   },
   child: const Text("CHANGE PASSWORD"),
-// ),
+ ),
 
     const SizedBox(height: 24),
             // ✅ SAVE BUTTON

@@ -82,14 +82,8 @@ class AuthRepository {
   return response;
 }
 
-  Future<void> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  }) async {
-    await _remoteSource.changePassword(
-      oldPassword: oldPassword,
-      newPassword: newPassword,
-    );
+  Future<void> changePassword(Map<String, dynamic> data) async {
+    await _remoteSource.changePassword(data);
   }
   // forgot password
   Future<void> forgotPassword(String id) {
