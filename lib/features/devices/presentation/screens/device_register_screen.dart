@@ -7,6 +7,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/device_repository.dart';
 import '../../domain/device_model.dart';
 import '../providers/wifi_devices_provider.dart';
+import '../widgets/manual_entry_sheet.dart';
 
 class DeviceRegisterScreen extends ConsumerStatefulWidget {
   const DeviceRegisterScreen({super.key});
@@ -30,7 +31,128 @@ class _State extends ConsumerState<DeviceRegisterScreen> {
     _searchCtrl.dispose();
     super.dispose();
   }
+  // remove device function
 
+// Future<void> _removeDevice(DeviceInfo device) async {
+//   try {
+//     // ✅ LOCAL DEVICE
+
+
+
+//     if (device.id == null || device.id!.isEmpty) {
+//       ref.read(localDeviceProvider.notifier).remove(device);
+
+//       if (mounted) {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           const SnackBar(content: Text('Removed locally')),
+//         );
+//       }
+//       return;
+//     }
+
+//     // ✅ API DEVICE
+//     await ref
+//         .read(deviceRepositoryProvider)
+//         .deleteDevice(device.id!);
+
+//     ref.refresh(wifiDevicesByOrgProvider);
+
+//     if (mounted) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text('Device removed')),
+//       );
+//     }
+//   } catch (e) {
+//     // 🔥 fallback: still remove locally
+//     ref.read(localDeviceProvider.notifier).remove(device);
+
+//     if (mounted) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text('Removed locally')),
+//       );
+//     }
+//   }
+//}
+// Future<void> _removeDevice(DeviceInfo device) async {
+//   try {
+//     // ✅ ALWAYS REMOVE LOCALLY FIRST
+//     ref.read(localDeviceProvider.notifier).remove(device);
+
+//     // ⚠️ OPTIONAL: try API delete (safe)
+//     if (device.id != null && device.id!.isNotEmpty) {
+//       try {
+//         await ref
+//             .read(deviceRepositoryProvider)
+//             .deleteDevice(device.id!);
+//       } catch (e) {
+//         print("API delete failed (ignored): $e");
+//       }
+//     }
+
+//     if (mounted) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text('Device removed')),
+//       );
+//     }
+//   } catch (e) {
+//     print("Remove error: $e");
+//   }
+// }
+
+Future<void> _removeDevice(DeviceInfo device) async {
+  try {
+    // ✅ Delay state change to next frame
+    Future.microtask(() {
+      ref.read(localDeviceProvider.notifier).remove(device);
+    });
+
+    // Optional API call (safe)
+    if (device.id != null && device.id!.isNotEmpty) {
+      try {
+        await ref
+            .read(deviceRepositoryProvider)
+            .deleteDevice(device.id!);
+      } catch (e) {
+        print("API delete failed (ignored): $e");
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Device removed')),
+      );
+    }
+  } catch (e) {
+    print("Remove crash fixed: $e");
+  }
+}s
+
+// confirm delete dialog
+void _confirmDelete(DeviceInfo device) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Remove Device'),
+      content: const Text('Are you sure you want to remove this device?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            await _removeDevice(device);
+          },
+          child: const Text(
+            'Remove',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    ),
+  );
+}
   Future<void> _registerDevice(BuildContext context) async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -76,103 +198,121 @@ class _State extends ConsumerState<DeviceRegisterScreen> {
     } finally {
       setState(() => _submitting = false);
     }
+    // navigate back after registration
+    Navigator.of(context).pop();
   }
 
-  void _showCreateSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: ThemeConstants.surface,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(2)),
-                  ),
-                  const Text('Create new device',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white),
-                      textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextFormField(
-                          controller: _serialCtrl,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            hintText: 'Serial Number / MAC Address',
-                            prefixIcon: Icon(Icons.qr_code_rounded,
-                                color: ThemeConstants.textTertiary, size: 20),
-                          ),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Required'
-                              : null,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _nameCtrl,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            hintText: 'Device Name',
-                            prefixIcon: Icon(Icons.label_outline_rounded,
-                                color: ThemeConstants.textTertiary, size: 20),
-                          ),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Required'
-                              : null,
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: _submitting
-                                ? null
-                                : () => _registerDevice(context),
-                            child: _submitting
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white))
-                                : const Text('Create device'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+  // void _showCreateSheet() {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     backgroundColor: Colors.transparent,
+  //     builder: (context) {
+  //       return Padding(
+  //         padding:
+  //             EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+  //         child: SingleChildScrollView(
+  //           child: Container(
+  //             padding: const EdgeInsets.all(24),
+  //             decoration: BoxDecoration(
+  //               color: ThemeConstants.surface,
+  //               borderRadius:
+  //                   const BorderRadius.vertical(top: Radius.circular(20)),
+  //             ),
+  //             child: Column(
+  //               mainAxisSize: MainAxisSize.min,
+  //               crossAxisAlignment: CrossAxisAlignment.stretch,
+  //               children: [
+  //                 Container(
+  //                   width: 40,
+  //                   height: 4,
+  //                   margin: const EdgeInsets.only(bottom: 16),
+  //                   decoration: BoxDecoration(
+  //                       color: Colors.white24,
+  //                       borderRadius: BorderRadius.circular(2)),
+  //                 ),
+  //                 const Text('Create new device',
+  //                     style: TextStyle(
+  //                         fontSize: 18,
+  //                         fontWeight: FontWeight.w600,
+  //                         color: Colors.white),
+  //                     textAlign: TextAlign.center),
+  //                 const SizedBox(height: 16),
+  //                 Form(
+  //                   key: _formKey,
+  //                   child: Column(
+  //                     crossAxisAlignment: CrossAxisAlignment.stretch,
+  //                     mainAxisSize: MainAxisSize.min,
+  //                     children: [
+  //                       TextFormField(
+  //                         controller: _serialCtrl,
+  //                         style: const TextStyle(color: Colors.white),
+  //                         decoration: const InputDecoration(
+  //                           hintText: 'Serial Number / MAC Address',
+  //                           prefixIcon: Icon(Icons.qr_code_rounded,
+  //                               color: ThemeConstants.textTertiary, size: 20),
+  //                         ),
+  //                         validator: (v) => (v == null || v.trim().isEmpty)
+  //                             ? 'Required'
+  //                             : null,
+  //                       ),
+  //                       const SizedBox(height: 12),
+  //                       TextFormField(
+  //                         controller: _nameCtrl,
+  //                         style: const TextStyle(color: Colors.white),
+  //                         decoration: const InputDecoration(
+  //                           hintText: 'Device Name',
+  //                           prefixIcon: Icon(Icons.label_outline_rounded,
+  //                               color: ThemeConstants.textTertiary, size: 20),
+  //                         ),
+  //                         validator: (v) => (v == null || v.trim().isEmpty)
+  //                             ? 'Required'
+  //                             : null,
+  //                       ),
+  //                       const SizedBox(height: 24),
+  //                       SizedBox(
+  //                         width: double.infinity,
+  //                         height: 48,
+  //                         child: ElevatedButton(
+  //                           onPressed: _submitting
+  //                               ? null
+  //                               : () => _registerDevice(context),
+  //                           child: _submitting
+  //                               ? const SizedBox(
+  //                                   height: 20,
+  //                                   width: 20,
+  //                                   child: CircularProgressIndicator(
+  //                                       strokeWidth: 2, color: Colors.white))
+  //                               : const Text('Create device'),
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
+
+void _showCreateSheet() {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => ManualEntrySheet(
+      onSubmit: (name, mac) async {
+        _nameCtrl.text = name;
+        _serialCtrl.text = mac;
+
+        await _registerDevice(context);
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildActionButton(IconData icon, String label) {
     return Expanded(
@@ -255,7 +395,26 @@ class _State extends ConsumerState<DeviceRegisterScreen> {
                 _buildActionButton(Icons.show_chart, 'Report'),
                 _buildActionButton(Icons.wifi, 'Edit WiFi'),
                 _buildActionButton(Icons.edit, 'Edit Name'),
-                _buildActionButton(Icons.delete_outline, 'Remove'),
+                // _buildActionButton(Icons.delete_outline, 'Remove'),
+                Expanded(
+  child: GestureDetector(
+    onTap: () => _confirmDelete(device),
+    child: Column(
+      children: const [
+        Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+        SizedBox(height: 6),
+        Text(
+          'Remove',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.redAccent,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
               ],
             ),
           ],
@@ -275,7 +434,8 @@ class _State extends ConsumerState<DeviceRegisterScreen> {
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+            children: [TextField(
+ 
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -320,8 +480,7 @@ class _State extends ConsumerState<DeviceRegisterScreen> {
                   color: ThemeConstants.surface,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: TextField(
-                  controller: _searchCtrl,
+                child:     controller: _searchCtrl,
                   onChanged: (value) =>
                       setState(() => _searchText = value.trim()),
                   decoration: InputDecoration(

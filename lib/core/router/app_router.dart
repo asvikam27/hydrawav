@@ -8,7 +8,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/devices/presentation/screens/device_detail_screen.dart';
 import '../../features/devices/presentation/screens/device_list_screen.dart';
-import '../../features/devices/presentation/screens/device_register_screen.dart';
+// import '../../features/devices/presentation/screens/device_register_screen.dart';
 import '../../features/history/presentation/screens/history_list_screen.dart';
 import '../../features/history/presentation/screens/session_detail_screen.dart';
 import '../../features/protocols/presentation/screens/protocol_detail_screen.dart';
@@ -103,7 +103,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           sessionClockAnchorMs: sessionClockAnchorMs,
         );
       }),
-      GoRoute(path: RoutePaths.deviceRegister, name: RouteNames.deviceRegister, builder: (c, s) => const DeviceRegisterScreen()),
+      // GoRoute(path: RoutePaths.deviceRegister, name: RouteNames.deviceRegister, builder: (c, s) => const DeviceRegisterScreen()),
       GoRoute(path: RoutePaths.deviceDetail, name: RouteNames.deviceDetail, builder: (c, s) => DeviceDetailScreen(deviceId: s.pathParameters['id']!)),
       GoRoute(path: RoutePaths.sessionDetail, name: RouteNames.sessionDetail, builder: (c, s) => SessionDetailScreen(sessionId: s.pathParameters['id']!)),
       GoRoute(path: RoutePaths.profileEdit, name: RouteNames.profileEdit, builder: (c, s) => const ProfileEditScreen()),

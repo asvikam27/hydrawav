@@ -35,22 +35,37 @@ class DeviceRepository {
       _remoteSource.getDevicesByOrg(orgId);
 
   /// Register a new device.
-  Future<DeviceInfo> registerDevice({
-    required String name,
-    required String macAddress,
-    required List<int> organizationIds,
-  }) async {
-    final device = await _remoteSource.registerDevice(
-      name: name,
-      macAddress: macAddress,
-      organizationIds: organizationIds,
-    );
+  // Future<DeviceInfo> registerDevice({
+  //   required String name,
+  //   required String macAddress,
+  //   required List<int> organizationIds,
+  // }) async {
+  //   final device = await _remoteSource.registerDevice(
+  //     name: name,
+  //     macAddress: macAddress,
+  //     organizationIds: organizationIds,
+  //   );
 
-    // Also add to BLE paired devices
-    await _bleRepository.renamePairedDevice(macAddress, name);
+  //   // Also add to BLE paired devices
+  //   await _bleRepository.renamePairedDevice(macAddress, name);
 
-    return device;
-  }
+  //   return device;
+  // }
+Future<DeviceInfo?> registerDevice({
+  required String name,
+  required String macAddress,
+  required List<int> organizationIds,
+}) async {
+  final device = await _remoteSource.registerDevice(
+    name: name,
+    macAddress: macAddress,
+    organizationIds: organizationIds,
+  );
+
+  await _bleRepository.renamePairedDevice(macAddress, name);
+
+  return device; // nullable
+}
 
   /// Update device name.
   Future<DeviceInfo> renameDevice(String sensorId, String newName) =>
@@ -63,4 +78,17 @@ class DeviceRepository {
   /// Remove a paired device.
   Future<void> forgetDevice(String macAddress) =>
       _bleRepository.removePairedDevice(macAddress);
+
+  // delete api
+  // Future<void> deleteDevice(String sensorId) =>
+  //     _remoteSource.deleteDevice(sensorId);
+  Future<void> deleteDevice(String sensorId) async {
+  try {
+    await _remoteSource.deleteDevice(sensorId);
+  } catch (e) {
+    // 🔥 DO NOT CRASH APP
+    print("❌ Delete API failed (ignored): $e");
+  }
+}
+
 }

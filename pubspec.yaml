@@ -11,6 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
 
+  dotted_border: ^2.0.0
+
   # UI icons
   cupertino_icons: ^1.0.8
 
@@ -33,7 +35,7 @@ dependencies:
   drift_flutter: ^0.2.4
 
   # Key-Value Storage
-  shared_preferences: ^2.3.4
+  shared_preferences: ^2.5.5
 
   # Secure Storage
   flutter_secure_storage: ^9.2.3

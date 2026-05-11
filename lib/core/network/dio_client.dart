@@ -10,7 +10,8 @@ final loggerProvider = Provider<Logger>((ref) => Logger(
       printer: PrettyPrinter(methodCount: 0, printTime: true),
     ));
 
-/// Dio instance for Django backend (auth, profile, organizations, sensors)
+/// ================= DJANGO DIO =================
+/// Used for auth, sensors, orgs
 final djangoDioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     baseUrl: ApiEndpoints.djangoBaseUrl,
@@ -19,17 +20,38 @@ final djangoDioProvider = Provider<Dio>((ref) {
     headers: {'Content-Type': 'application/json'},
   ));
 
+  /// 🔥 AUTH INTERCEPTOR (VERY IMPORTANT)
   dio.interceptors.add(ref.read(authInterceptorProvider));
+
+  /// 🔥 DEBUG LOGGER
   dio.interceptors.add(LogInterceptor(
     requestBody: true,
     responseBody: true,
+    requestHeader: true,
+    responseHeader: false,
+    error: true,
     logPrint: (obj) => ref.read(loggerProvider).d(obj),
   ));
+
+  /// 🔥 FALLBACK TOKEN (TEMP FIX - REMOVE LATER)
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        // 👇 If auth interceptor fails, fallback here
+        if (!options.headers.containsKey('Authorization')) {
+          const token = "PASTE_YOUR_TOKEN_HERE"; // 🔥 TEMP ONLY
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+
+        return handler.next(options);
+      },
+    ),
+  );
 
   return dio;
 });
 
-/// Dio instance for Node.js backend (clients, protocols, payments, intake)
+/// ================= NODE DIO =================
 final nodeDioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     baseUrl: ApiEndpoints.nodeBaseUrl,
@@ -39,16 +61,19 @@ final nodeDioProvider = Provider<Dio>((ref) {
   ));
 
   dio.interceptors.add(ref.read(authInterceptorProvider));
+
   dio.interceptors.add(LogInterceptor(
     requestBody: true,
     responseBody: true,
+    requestHeader: true,
+    error: true,
     logPrint: (obj) => ref.read(loggerProvider).d(obj),
   ));
 
   return dio;
 });
 
-/// Dio instance for device control (Wi-Fi commands)
+/// ================= DEVICE CONTROL =================
 final deviceDioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     baseUrl: ApiEndpoints.deviceControlUrl,

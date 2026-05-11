@@ -15,12 +15,13 @@ class OrganizationDropdown extends ConsumerWidget {
     return PopupMenuButton<String>(
       onSelected: (value) {
         if (value == 'switch') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const SelectOrganizationPage(),
-            ),
-          );
+          // Navigator.push(
+          //   context,
+          //   MaterialPageRoute(
+          //     builder: (_) => const SelectOrganizationPage(),
+          //   ),
+          // );
+          onPressed: _showCreateSheet,
         }
       },
       child: Row(

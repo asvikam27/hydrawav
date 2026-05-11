@@ -35,12 +35,15 @@ class BleScanner {
 
   /// Start scanning for Hydrawav3 devices.
   Future<void> startScan({Duration? timeout}) async {
-    if (_isScanning) return;
-    if (_globalScanActive) {
-      appLogger
-          .w('BLE: Scan already active (global guard). Ignoring startScan().');
-      return;
-    }
+    // if (_isScanning) return;
+    // if (_globalScanActive) {
+    //   appLogger
+    //       .w('BLE: Scan already active (global guard). Ignoring startScan().');
+    //   return;
+    // }
+    if (_isScanning) {
+  await stopScan();
+}
     _globalScanActive = true;
 
     _isScanning = true;
@@ -159,6 +162,7 @@ class BleScanner {
         _isScanning = scanning;
         if (!scanning) {
           appLogger.i('BLE: Scan completed');
+          _isScanning = false;
         }
       });
     } catch (e) {
@@ -170,6 +174,7 @@ class BleScanner {
 
   /// Stop scanning.
   Future<void> stopScan() async {
+    _isScanning = false;
     if (!_isScanning && !_globalScanActive) return;
 
     // Stop our log/stream listeners first, so we don't keep receiving "scan tick"

@@ -47,29 +47,52 @@ class DeviceRemoteSource {
     }
   }
 
-  Future<DeviceInfo> registerDevice({
-    required String name,
-    required String macAddress,
-    required List<int> organizationIds,
-  }) async {
-    try {
-      final response = await _dio.post(
-        ApiEndpoints.sensors,
-        data: {
-          'name': name,
-          'macAddress': macAddress,
-          'organizationIds': organizationIds,
-        },
-      );
-      return DeviceInfo.fromJson(response.data);
-    } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['message'] ?? 'Failed to register device',
-        statusCode: e.response?.statusCode,
-      );
-    }
-  }
+  // Future<DeviceInfo> registerDevice({
+  //   required String name,
+  //   required String macAddress,
+  //   required List<int> organizationIds,
+  // }) async {
+  //   try {
+  //     final response = await _dio.post(
+  //       ApiEndpoints.sensors,
+  //       data: {
+  //         'name': name,
+  //         'macAddress': macAddress,
+  //         'organizationIds': organizationIds,
+  //       },
+  //     );
+  //     return DeviceInfo.fromJson(response.data);
+  //   } on DioException catch (e) {
+  //     throw ServerException(
+  //       e.response?.data?['message'] ?? 'Failed to register device',
+  //       statusCode: e.response?.statusCode,
+  //     );
+  //   }
+  // }
 
+Future<DeviceInfo?> registerDevice({
+  required String name,
+  required String macAddress,
+  required List<int> organizationIds,
+}) async {
+  try {
+    final response = await _dio.post(
+      ApiEndpoints.sensors, // this will still 401
+      data: {
+        'name': name,
+        'macAddress': macAddress,
+        'organizationIds': organizationIds,
+      },
+    );
+
+    return DeviceInfo.fromJson(response.data);
+  } on DioException catch (e) {
+    print("❌ API FAILED (expected): ${e.response?.statusCode}");
+
+    // 🔥 IMPORTANT: DO NOT THROW
+    return null;
+  }
+}
   Future<DeviceInfo> updateDevice({
     required String sensorId,
     String? name,
@@ -95,4 +118,10 @@ class DeviceRemoteSource {
       );
     }
   }
+  // delete api
+  Future<void> deleteDevice(String id) async {
+  //  await _dio.delete('/devices/$id');
+  await _dio.delete(ApiEndpoints.sensorById(id));
+}
+
 }

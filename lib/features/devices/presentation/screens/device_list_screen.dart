@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import '../widgets/manual_entry_sheet.dart';
+import '../../../devices/data/device_repository.dart';
 import '../../../../core/constants/theme_constants.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/widgets/premium.dart';
@@ -14,6 +15,7 @@ import '../../../devices/domain/device_model.dart';
 import '../../../devices/presentation/providers/wifi_devices_provider.dart';
 import '../../../session/domain/session_model.dart';
 import '../../../session/presentation/providers/session_target_provider.dart';
+import '../providers/local_device_provider.dart';
 
 final pairedDevicesProvider = StreamProvider((ref) {
   return ref.read(bleRepositoryProvider).watchPairedDevices();
@@ -69,8 +71,29 @@ class DeviceListScreen extends ConsumerWidget {
                           _HeaderBtn(
                               icon: Icons.add_rounded,
                               filled: true,
-                              onTap: () =>
-                                  context.push(RoutePaths.deviceRegister)),
+                              // onTap: () =>
+                              //     context.push(RoutePaths.deviceRegister)),
+                           onTap: () async {
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => ManualEntrySheet(
+  onSubmit: (name, mac) async {
+    await _registerDevice(context, ref, name, mac);
+  },
+
+  onInitializeDiscovery: () {
+    ref
+        .read(sessionTargetProvider.notifier)
+        .setTransport(SessionTransport.ble);
+
+    ref.read(startScanProvider)();
+  },
+),
+  );
+},
+                              ), 
                         ]),
                       ],
                     ),
@@ -234,45 +257,93 @@ class DeviceListScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                // data: (list) {
+                //   if (list.isEmpty) {
+                //     return const SliverToBoxAdapter(
+                //       child: Padding(
+                //         padding: EdgeInsets.only(top: 8, bottom: 8),
+                //         child: Text(
+                //           'No WiFi devices found for your organization.',
+                //           style: TextStyle(
+                //             fontSize: 13,
+                //             color: ThemeConstants.textSecondary,
+                //           ),
+                //         ),
+                //       ),
+                //     );
+                //   }
+                //   return SliverList(
+                //     delegate: SliverChildBuilderDelegate(
+                //       (ctx, i) {
+                //         final d = list[i];
+                //         final selected =
+                //             target.deviceIds.contains(d.macAddress);
+                //         return AnimatedEntrance(
+                //           index: i + 1,
+                //           child: Padding(
+                //             padding: const EdgeInsets.only(bottom: 10),
+                //             child: _WifiDeviceCard(
+                //               device: d,
+                //               selected: selected,
+                //               onTap: () => ref
+                //                   .read(sessionTargetProvider.notifier)
+                //                   .toggleDevice(d.macAddress),
+                //                   onRemove: () => _confirmDelete(context, ref, d), 
+                //             ),
+                //           ),
+                //         );
+                //       },
+                //       childCount: list.length,
+                //     ),
+                //   );
+                // },
                 data: (list) {
-                  if (list.isEmpty) {
-                    return const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 8, bottom: 8),
-                        child: Text(
-                          'No WiFi devices found for your organization.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: ThemeConstants.textSecondary,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, i) {
-                        final d = list[i];
-                        final selected =
-                            target.deviceIds.contains(d.macAddress);
-                        return AnimatedEntrance(
-                          index: i + 1,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _WifiDeviceCard(
-                              device: d,
-                              selected: selected,
-                              onTap: () => ref
-                                  .read(sessionTargetProvider.notifier)
-                                  .toggleDevice(d.macAddress),
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: list.length,
-                    ),
-                  );
-                },
+  final localDevices = ref.watch(localDeviceProvider);
+
+  final allDevices = [...list, ...localDevices];
+
+  if (allDevices.isEmpty) {
+    return const SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.only(top: 8, bottom: 8),
+        child: Text(
+          'No WiFi devices found.',
+          style: TextStyle(
+            fontSize: 13,
+            color: ThemeConstants.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  return SliverList(
+    delegate: SliverChildBuilderDelegate(
+      (ctx, i) {
+        final d = allDevices[i]; // ✅ IMPORTANT FIX
+
+        final selected =
+            target.deviceIds.contains(d.macAddress);
+
+        return AnimatedEntrance(
+          index: i + 1,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _WifiDeviceCard(
+              device: d,
+              selected: selected,
+              onTap: () => ref
+                  .read(sessionTargetProvider.notifier)
+                  .toggleDevice(d.macAddress),
+              onRemove: () => _confirmDelete(ref, d),
+            ),
+          ),
+        );
+      },
+      childCount: allDevices.length, // ✅ IMPORTANT
+    ),
+  );
+}
               ),
             ),
           ],
@@ -716,15 +787,92 @@ class _HeaderBtn extends StatelessWidget {
   }
 }
 
+// class _WifiDeviceCard extends StatelessWidget {
+//   final DeviceInfo device;
+//   final bool selected;
+//   final VoidCallback onTap;
+
+//   const _WifiDeviceCard({
+//     required this.device,
+//     required this.selected,
+//     required this.onTap,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return GradientCard(
+//       onTap: onTap,
+//       showGlow: selected,
+//       padding: const EdgeInsets.all(16),
+//       child: Row(
+//         children: [
+//           GlowIconBox(
+//             icon: Icons.wifi_rounded,
+//             color:
+//                 selected ? ThemeConstants.accent : ThemeConstants.textSecondary,
+//           ),
+//           const SizedBox(width: 14),
+//           Expanded(
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(
+//                   device.name,
+//                   style: const TextStyle(
+//                     fontSize: 15,
+//                     fontWeight: FontWeight.w600,
+//                     color: Colors.white,
+//                   ),
+//                 ),
+//                 const SizedBox(height: 4),
+//                 Text(
+//                   device.macAddress,
+//                   style: const TextStyle(
+//                     fontSize: 12,
+//                     color: ThemeConstants.textTertiary,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//           Container(
+//             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+//             decoration: BoxDecoration(
+//               color: selected
+//                   ? ThemeConstants.accent.withValues(alpha: 0.16)
+//                   : ThemeConstants.surfaceVariant,
+//               borderRadius: BorderRadius.circular(10),
+//               border: Border.all(
+//                 color: selected
+//                     ? ThemeConstants.accent.withValues(alpha: 0.35)
+//                     : ThemeConstants.border,
+//               ),
+//             ),
+//             child: Text(
+//               selected ? 'Selected' : 'Select',
+//               style: TextStyle(
+//                 fontSize: 12,
+//                 fontWeight: FontWeight.w700,
+//                 color: selected ? ThemeConstants.accent : Colors.white,
+//               ),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 class _WifiDeviceCard extends StatelessWidget {
   final DeviceInfo device;
   final bool selected;
   final VoidCallback onTap;
+  final VoidCallback onRemove; // ✅ ADD THIS
 
   const _WifiDeviceCard({
     required this.device,
     required this.selected,
     required this.onTap,
+    required this.onRemove, // ✅ ADD THIS
   });
 
   @override
@@ -733,56 +881,96 @@ class _WifiDeviceCard extends StatelessWidget {
       onTap: onTap,
       showGlow: selected,
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GlowIconBox(
-            icon: Icons.wifi_rounded,
-            color:
-                selected ? ThemeConstants.accent : ThemeConstants.textSecondary,
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  device.name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  device.macAddress,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: ThemeConstants.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: selected
-                  ? ThemeConstants.accent.withValues(alpha: 0.16)
-                  : ThemeConstants.surfaceVariant,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
+
+          /// 🔹 TOP ROW
+          Row(
+            children: [
+              GlowIconBox(
+                icon: Icons.wifi_rounded,
                 color: selected
-                    ? ThemeConstants.accent.withValues(alpha: 0.35)
-                    : ThemeConstants.border,
+                    ? ThemeConstants.accent
+                    : ThemeConstants.textSecondary,
               ),
-            ),
-            child: Text(
-              selected ? 'Selected' : 'Select',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: selected ? ThemeConstants.accent : Colors.white,
+              const SizedBox(width: 14),
+
+              /// DEVICE INFO
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      device.name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      device.macAddress,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: ThemeConstants.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              /// SELECT BUTTON
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? ThemeConstants.accent.withValues(alpha: 0.16)
+                      : ThemeConstants.surfaceVariant,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: selected
+                        ? ThemeConstants.accent.withValues(alpha: 0.35)
+                        : ThemeConstants.border,
+                  ),
+                ),
+                child: Text(
+                  selected ? 'Selected' : 'Select',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        selected ? ThemeConstants.accent : Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          /// 🔴 REMOVE BUTTON (NEW)
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.delete_outline,
+                      size: 18, color: Colors.redAccent),
+                  SizedBox(width: 4),
+                  Text(
+                    "Remove",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -790,4 +978,164 @@ class _WifiDeviceCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// register device function moved to bottom of file to avoid circular dependency with device_register_screen.dart
+// Future<void> _registerDevice(
+//   BuildContext context,
+//   WidgetRef ref,
+//   String name,
+//   String mac,
+// ) async {
+//   try {
+//     // ⚠️ You were missing orgId completely
+//     // TEMP FIX: pass empty list OR hardcode for now
+//     final orgId = 1; // 🔥 replace with actual if needed
+
+//     await ref.read(deviceRepositoryProvider).registerDevice(
+//       name: name,
+//       macAddress: mac,
+//       organizationIds: [orgId],
+//     );
+
+//     ref.refresh(wifiDevicesByOrgProvider);
+
+//     Navigator.pop(context); // close sheet
+
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       const SnackBar(content: Text('Device added')),
+//     );
+//   } catch (e) {
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text('Failed: $e')),
+//     );
+//   }
+// }
+Future<void> _registerDevice(
+  BuildContext context,
+  WidgetRef ref,
+  String name,
+  String mac,
+) async {
+  try {
+    final result = await ref
+        .read(deviceRepositoryProvider)
+        .registerDevice(
+          name: name,
+          macAddress: mac,
+          organizationIds: [1],
+        );
+
+    if (result != null) {
+      // ✅ API SUCCESS
+      ref.invalidate(wifiDevicesByOrgProvider);
+    } else {
+      // 🔥 API FAILED → LOCAL ADD
+      final tempDevice = DeviceInfo(
+        // id: DateTime.now().millisecondsSinceEpoch ,
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: name,
+        macAddress: mac,
+      );
+
+      ref.read(localDeviceProvider.notifier).add(tempDevice);
+    }
+
+    Navigator.pop(context);
+  } catch (e) {
+    print(e);
+  }
+}
+// createsheet
+void _showCreateSheet(BuildContext context, WidgetRef ref) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => ManualEntrySheet(
+  onSubmit: (name, mac) async {
+    await _registerDevice(context, ref, name, mac);
+  },
+
+  onInitializeDiscovery: () {
+    ref
+        .read(sessionTargetProvider.notifier)
+        .setTransport(SessionTransport.ble);
+
+    ref.read(startScanProvider)();
+  },
+),
+  );
+}
+// confirm delete dialog
+// void _confirmDelete(
+//     BuildContext context, WidgetRef ref, DeviceInfo device) {
+//   showDialog(
+//     context: context,
+//     builder: (_) => AlertDialog(
+//       title: const Text('Remove Device'),
+//       content: const Text('Are you sure?'),
+//       actions: [
+//         TextButton(
+//           onPressed: () => Navigator.pop(context),
+//           child: const Text('Cancel'),
+//         ),
+//         TextButton(
+//           onPressed: () async {
+//             Navigator.pop(context);
+
+//             await ref
+//                 .read(deviceRepositoryProvider)
+//                 .deleteDevice(device.id!);
+
+//             ref.refresh(wifiDevicesByOrgProvider);
+//           },
+//           child: const Text('Remove',
+//               style: TextStyle(color: Colors.red)),
+//         ),
+//       ],
+//     ),
+//   );
+// }
+// void _confirmDelete(BuildContext context, WidgetRef ref, DeviceInfo device){
+void _confirmDelete(WidgetRef ref, DeviceInfo device) {
+  showDialog(
+    context: ref.context, // ✅ SAFE context
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Remove Device'),
+      content: const Text('Are you sure?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(dialogContext);
+
+            // ✅ SAFE POST FRAME EXECUTION
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              // REMOVE LOCAL
+              ref.read(localDeviceProvider.notifier).remove(device);
+
+              // SAFE API DELETE
+              if (device.id != null && device.id!.isNotEmpty) {
+                try {
+                  await ref
+                      .read(deviceRepositoryProvider)
+                      .deleteDevice(device.id!);
+                } catch (_) {}
+              }
+
+              ref.invalidate(wifiDevicesByOrgProvider);
+            });
+          },
+          child: const Text(
+            'Remove',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    ),
+  );
 }
